@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indian City AQI Checker</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: block;
+            margin: 0 auto;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 4px;
+            display: none;
+        }
+        .good {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .moderate {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        .unhealthy {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            text-align: center;
+            display: none;
+        }
+        .city-list {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>World City AQI Checker</h1>
+        
+        <div class="form-group">
+            <label for="cityInput">Enter a City Name:</label>
+            <input type="text" id="cityInput" placeholder="e.g., Delhi, Mumbai, Kolkata, Bangalore">
+        </div>
+        
+        <button id="checkButton">Check AQI</button>
+        
+        <div class="loading" id="loading">
+            <p>Loading data...</p>
+        </div>
+        
+        <div class="error" id="errorMessage"></div>
+        
+        <div id="result">
+            <h2 id="cityName"></h2>
+            <p>Current AQI: <span id="aqiValue"></span></p>
+            <p>Category: <span id="aqiCategory"></span></p>
+            <p>Last Updated: <span id="lastUpdated"></span></p>
+        </div>
+        
+        <div class="city-list">
+            <p><strong>Popular cities:</strong> Delhi, Mumbai, Bangalore, Kolkata, Chennai, Hyderabad, Pune, Ahmedabad, Jaipur, Lucknow</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkButton = document.getElementById('checkButton');
+            const cityInput = document.getElementById('cityInput');
+            const result = document.getElementById('result');
+            const cityName = document.getElementById('cityName');
+            const aqiValue = document.getElementById('aqiValue');
+            const aqiCategory = document.getElementById('aqiCategory');
+            const lastUpdated = document.getElementById('lastUpdated');
+            const loading = document.getElementById('loading');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            checkButton.addEventListener('click', checkAQI);
+            cityInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    checkAQI();
+                }
+            });
+            
+            function checkAQI() {
+                const city = cityInput.value.trim();
+                
+                if (!city) {
+                    showError('Please enter a city name');
+                    return;
+                }
+                
+                // Hide previous results and errors
+                result.style.display = 'none';
+                errorMessage.style.display = 'none';
+                
+                // Show loading indicator
+                loading.style.display = 'block';
+                
+                // This uses the WAQI API (World Air Quality Index)
+                const apiToken = '80d7a62d2387f9bba810f4e427ec446eae9c5bd4'; // Using demo token - for production use your own token
+                const apiUrl = `https://api.waqi.info/feed/${city}/?token=${apiToken}`;
+                
+                fetch(apiUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        loading.style.display = 'none';
+                        
+                        if (data.status === 'ok') {
+                            displayResult(data.data, city);
+                        } else {
+                            showError('Could not find AQI data for this city. Please check the spelling or try another city.');
+                        }
+                    })
+                    .catch(error => {
+                        loading.style.display = 'none';
+                        showError('An error occurred while fetching data. Please try again later.');
+                        console.error('Error:', error);
+                    });
+            }
+            
+            function displayResult(data, searchedCity) {
+                // Get AQI value
+                const aqi = data.aqi;
+                
+                // Set city name
+                cityName.textContent = data.city.name || searchedCity;
+                
+                // Set AQI value
+                aqiValue.textContent = aqi;
+                
+                // Set category
+                let category;
+                if (aqi <= 50) {
+                    category = 'Good';
+                    result.className = 'good';
+                } else if (aqi <= 100) {
+                    category = 'Moderate';
+                    result.className = 'moderate';
+                } else if (aqi <= 150) {
+                    category = 'Unhealthy for Sensitive Groups';
+                    result.className = 'unhealthy';
+                } else if (aqi <= 200) {
+                    category = 'Unhealthy';
+                    result.className = 'unhealthy';
+                } else if (aqi <= 300) {
+                    category = 'Very Unhealthy';
+                    result.className = 'unhealthy';
+                } else {
+                    category = 'Hazardous';
+                    result.className = 'unhealthy';
+                }
+                
+                aqiCategory.textContent = category;
+                
+                // Last updated
+                const time = new Date(data.time.v);
+                lastUpdated.textContent = time.toLocaleString();
+                
+                // Show result
+                result.style.display = 'block';
+            }
+            
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
+
